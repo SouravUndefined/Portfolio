@@ -1,26 +1,30 @@
-# Cloud-agnostic Docker image.
-# Works on: AWS EC2, ECS/Fargate, GCP Cloud Run, Azure Container Apps, or any host with Docker.
 FROM python:3.12-slim
+
+# Copy uv binary from the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# System deps required by PyMuPDF for PDF rendering
+# System libs needed by PyMuPDF and matplotlib
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
+    fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies first (layer-cached unless requirements change)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python deps first (Docker layer cache — only reruns if lock file changes)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY app.py spending_pipeline.py generate_report.py data_loader.py ./
 
-# Temp directory for generated files (CSV + PDF reports)
 ENV FILES_DIR=/tmp/spending-files
 
 EXPOSE 8000
 
-# uvicorn with 2 workers — swap to gunicorn for higher concurrency if needed
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["/app/.venv/bin/gunicorn", "app:app", \
+     "-w", "2", \
+     "-k", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000", \
+     "--timeout", "1200"]

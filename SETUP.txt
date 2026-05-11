@@ -1,316 +1,267 @@
 ================================================================================
-  SPENDING METRICS — COMPLETE SETUP GUIDE
-  Vision-based PDF bank statement analyser + PDF report generator
+  PORTFOLIO — SPENDING ANALYSER
+  Complete Setup Guide: Local Dev + Docker + Free AWS EC2 + Hostinger Domain
 ================================================================================
+
+  GitHub: https://github.com/SouravUndefined/Portfolio
+
+  WHY DOCKER?
+  -----------
+  The backend is packaged as a Docker image. Build it once and run it on:
+    - AWS EC2 (this guide)
+    - Render.com (free, no credit card)
+    - Oracle Cloud Always Free (free forever)
+    - Google Cloud Run, Azure Container Apps, or any Linux server
+  To move platforms: just docker pull on the new machine and run.
+
 
 TABLE OF CONTENTS
 -----------------
-  PART A  —  LOCAL DEVELOPMENT SETUP
-  PART B  —  AWS DEPLOYMENT (EC2 + S3 + Docker)
-  PART C  —  ENVIRONMENT VARIABLE REFERENCE
-  PART D  —  HOW TO UPDATE / REDEPLOY
-  PART E  —  TROUBLESHOOTING
+  PART A  — Local Development Setup (no Docker)
+  PART B  — Build & Push Docker Image
+  PART C  — Free AWS EC2 Deployment (t2.micro, 12 months free)
+  PART D  — Connect Hostinger Domain + Free SSL
+  PART E  — Deploying Updates
+  PART F  — Alternative: Render.com (always free, no credit card)
+  PART G  — Troubleshooting
+
 
 ================================================================================
-  PART A — LOCAL DEVELOPMENT SETUP
+  PART A — LOCAL DEVELOPMENT SETUP (no Docker needed)
 ================================================================================
 
-WHAT YOU NEED BEFORE STARTING
-------------------------------
-  1. Python 3.12 or higher       https://www.python.org/downloads/
-  2. uv  (Python package manager) — install with:
-       Windows:  winget install astral-sh.uv
-       Mac/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
-  3. Node.js 18+                 https://nodejs.org/
-  4. A Groq API key (FREE)       https://console.groq.com/keys
-       - Sign up at console.groq.com
-       - Click "Create API Key"
-       - Copy the key starting with gsk_...
+PREREQUISITES
+-------------
+  1. Python 3.12       https://www.python.org/downloads/
+  2. uv                winget install astral-sh.uv          (Windows)
+                       curl -LsSf https://astral.sh/uv/install.sh | sh  (Mac/Linux)
+  3. Node.js 18+       https://nodejs.org/
+  4. Groq API key      https://console.groq.com/keys  (free, starts with gsk_)
 
-PROJECT FOLDER STRUCTURE
--------------------------
-  After setup your project looks like this:
 
-  Usecase 2 - Spending Metrics/
-  ├── backend/                    ← Python FastAPI server
-  │   ├── app.py
-  │   ├── spending_pipeline.py
-  │   ├── generate_report.py
-  │   ├── data_loader.py
-  │   ├── Dockerfile
-  │   ├── nginx.conf
-  │   ├── pyproject.toml
-  │   ├── uv.lock
-  │   └── .env.example
+PROJECT STRUCTURE
+-----------------
+  Portfolio/
+  ├── backend/
+  │   └── budget-tracker/
+  │       ├── app.py
+  │       ├── spending_pipeline.py
+  │       ├── generate_report.py
+  │       ├── pyproject.toml
+  │       ├── Dockerfile
+  │       └── .env              <- you create this (never commit)
   ├── frontend/
-  │   └── corporate-buddy/
-  │       └── spending-metrics/   ← React app
-  │           ├── src/
-  │           ├── package.json
-  │           └── .env.example
-  ├── monthly_data/               ← put your PDF statements here
-  └── SETUP.txt                   ← this file
+  │   ├── src/
+  │   ├── package.json
+  │   └── .env                  <- you create this (never commit)
+  └── SETUP.txt
 
 
 ------------------------------------------------------------
-  A1. BACKEND SETUP (run the API server locally)
+  A1. BACKEND (Python / FastAPI)
 ------------------------------------------------------------
 
-Step 1 — Open a terminal and navigate to the backend folder:
+    cd Portfolio/backend/budget-tracker
 
-    cd "Usecase 2 - Spending Metrics/backend"
+  Create .env:
 
-Step 2 — Copy the example environment file and fill in your key:
+    nano .env     (or open in any text editor)
 
-    Windows (PowerShell):  Copy-Item .env.example .env
-    Mac/Linux:             cp .env.example .env
+  Paste and fill in:
 
-    Open .env in any text editor and set:
-      API_KEY=gsk_your_actual_groq_key_here
+    MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+    BASE_URL=https://api.groq.com/openai/v1
+    API_KEY=gsk_your_groq_key_here
+    FILES_DIR=/tmp/spending-files
+    ALLOWED_ORIGINS=http://localhost:3000
 
-    Leave everything else as default for local development.
-
-Step 3 — Install all Python dependencies:
+  Install and run:
 
     uv sync
-
-    This creates a .venv folder and installs all 53 packages.
-    First run takes 2-5 minutes (compiles some packages from source).
-
-Step 4 — Start the backend server:
-
     uv run uvicorn app:app --reload --port 8000
 
-    You should see:
-      INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-
-    Test it is alive:
-      Open browser → http://localhost:8000/health
-      You should see: {"status":"ok"}
-
-    Keep this terminal open. The server runs until you press CTRL+C.
+  Test: http://localhost:8000/health → {"status":"ok"}
 
 
 ------------------------------------------------------------
-  A2. FRONTEND SETUP (run the React UI locally)
+  A2. FRONTEND (React / Vite)
 ------------------------------------------------------------
 
-Step 1 — Open a NEW terminal and navigate to the frontend folder:
+    cd Portfolio/frontend
 
-    cd "Usecase 2 - Spending Metrics/frontend/corporate-buddy/spending-metrics"
+  Create .env:
 
-Step 2 — Copy the environment file:
+    VITE_API_URL=http://localhost:8000
 
-    Windows (PowerShell):  Copy-Item .env.example .env
-    Mac/Linux:             cp .env.example .env
-
-    The default VITE_API_URL=/api works for local development.
-    No changes needed.
-
-Step 3 — Install Node.js dependencies:
+  Install and run:
 
     npm install
-
-    This installs React, Vite, Tailwind, etc. (~200MB in node_modules).
-    Takes about 1-2 minutes on first run.
-
-Step 4 — Start the frontend dev server:
-
     npm run dev
 
-    You should see:
-      VITE v6.x.x  ready in xxx ms
-      ➜  Local:   http://localhost:3000/
-
-    Open your browser at http://localhost:3000
-
-
-------------------------------------------------------------
-  A3. USING THE APP LOCALLY
-------------------------------------------------------------
-
-  1. Open http://localhost:3000 in your browser
-  2. Click on the Spending Tool / Analyse button
-  3. Upload a PDF bank statement (HDFC, SBI, ICICI, Axis, Google Pay, etc.)
-  4. Wait 30-120 seconds (the vision AI reads each page)
-  5. Download links appear for:
-       - spending_YYYYMM.csv  (Power BI ready, 31 analytical columns)
-       - spending_report_YYYYMM.pdf  (9-page visual report)
-
-  NOTE: Backend must be running (Step A1) before uploading.
-  NOTE: Files are automatically deleted from the server after 1 hour.
-
-
-------------------------------------------------------------
-  A4. RUNNING THE PIPELINE FROM COMMAND LINE (no UI)
-------------------------------------------------------------
-
-  If you want to process a folder of PDFs directly without the web UI:
-
-    cd "Usecase 2 - Spending Metrics/backend"
-
-    uv run python spending_pipeline.py ../monthly_data
-    uv run python generate_report.py  ../monthly_data
-
-  Output goes into the monthly_data/ folder.
+  Open: http://localhost:3000
 
 
 ================================================================================
-  PART B — AWS DEPLOYMENT (EC2 + S3 + Docker)
+  PART B — BUILD & PUSH DOCKER IMAGE
 ================================================================================
 
-WHAT YOU NEED
--------------
-  1. AWS account                    https://aws.amazon.com
-  2. Docker Desktop installed locally  https://www.docker.com/products/docker-desktop/
-  3. Docker Hub account (free)      https://hub.docker.com
-     OR use AWS ECR (shown as alternative)
-  4. A domain name (optional but recommended for HTTPS)
-     Recommended registrar: Namecheap, GoDaddy, or Route53
-  5. Your Groq API key (same as local setup)
+  This section runs on YOUR LOCAL PC (not EC2).
+  You need Docker Desktop installed: https://www.docker.com/products/docker-desktop/
+  You need a Docker Hub account (free): https://hub.docker.com
 
-OVERVIEW OF WHAT WE ARE BUILDING
-----------------------------------
-  Your PC → builds Docker image → pushes to Docker Hub
-  AWS EC2 → pulls Docker image → runs backend container
-  AWS S3  → stores your source PDF files
-  Nginx   → sits in front, serves frontend + proxies /api to container
-  Browser → uploads PDF → Nginx → Docker container → returns results
+  Docker Hub gives 1 free public image (unlimited pulls) or 1 private image.
+  This project's image is safe to make public — no secrets are baked in
+  (API keys and .env are injected at runtime via environment variables).
+
 
 ------------------------------------------------------------
-  B1. CREATE S3 BUCKET (stores your source PDFs)
+  B1. LOG IN TO DOCKER HUB
 ------------------------------------------------------------
 
-  1. Go to AWS Console → S3 → Create bucket
+    docker login
+
+  Enter your Docker Hub username and password.
+
+
+------------------------------------------------------------
+  B2. BUILD THE IMAGE
+------------------------------------------------------------
+
+    cd Portfolio/backend/budget-tracker
+
+    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
+
+  Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username.
+  First build takes 5-10 minutes (downloads Python base + installs packages).
+  Subsequent builds are fast (Docker layer cache).
+
+
+------------------------------------------------------------
+  B3. TEST THE IMAGE LOCALLY
+------------------------------------------------------------
+
+    docker run --rm -p 8000:8000 \
+      -e API_KEY=gsk_your_key \
+      -e MODEL=meta-llama/llama-4-scout-17b-16e-instruct \
+      -e BASE_URL=https://api.groq.com/openai/v1 \
+      -e ALLOWED_ORIGINS=http://localhost:3000 \
+      YOUR_DOCKERHUB_USERNAME/spending-api:latest
+
+  Test: http://localhost:8000/health → {"status":"ok"}
+  Stop: CTRL+C
+
+
+------------------------------------------------------------
+  B4. PUSH TO DOCKER HUB
+------------------------------------------------------------
+
+    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
+
+  First push takes 3-8 minutes (uploads ~600MB of layers).
+  Subsequent pushes only upload changed layers (usually < 1 minute).
+
+  Your image is now at:
+    https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/spending-api
+
+
+================================================================================
+  PART C — FREE AWS EC2 DEPLOYMENT
+================================================================================
+
+COST
+----
+  EC2 t2.micro       FREE for 12 months (750 hrs/month)
+  Elastic IP         FREE when attached to a running instance
+  SSL (Certbot)      FREE forever (Let's Encrypt)
+  Docker Hub         FREE (public image)
+  Groq API           FREE (500K tokens/day)
+  ---------------------------------------------------------
+  TOTAL YEAR 1:      $0
+  AFTER 12 MONTHS:   ~$8.50/month
+
+
+------------------------------------------------------------
+  C1. LAUNCH EC2 INSTANCE
+------------------------------------------------------------
+
+  1. https://console.aws.amazon.com → EC2 → Launch Instance
+
   2. Settings:
-       Bucket name:          spending-metrics-data   (must be globally unique)
-       AWS Region:           ap-south-1  (Mumbai — closest to India)
-       Block all public access: ENABLED  (keep private)
-       Versioning:           disabled (not needed)
-       Encryption:           SSE-S3 (default)
-  3. Click Create bucket.
+       Name:             portfolio-server
+       AMI:              Ubuntu Server 22.04 LTS (64-bit x86) — Free tier eligible
+       Instance type:    t2.micro      ← free tier
+       Key pair:         Create new → Name: portfolio-key → RSA → .pem
+                         DOWNLOAD AND SAVE. Cannot re-download.
 
-  4. Upload your PDF statements:
-       - Open the bucket → Create folder → name it "monthly"
-       - Upload your PDF files into the "monthly/" folder
+  3. Network settings → Edit → Create security group: portfolio-sg
+       SSH    port 22   Source: My IP
+       HTTP   port 80   Source: 0.0.0.0/0
+       HTTPS  port 443  Source: 0.0.0.0/0
 
-  5. Note your bucket name — you will need it later.
+  4. Storage: 15 GiB gp3
 
-
-------------------------------------------------------------
-  B2. CREATE IAM ROLE FOR EC2 (no hardcoded AWS keys)
-------------------------------------------------------------
-
-  1. AWS Console → IAM → Roles → Create role
-  2. Trusted entity type: AWS service
-  3. Use case: EC2 → Next
-  4. Click "Create policy" (opens new tab):
-       - Choose JSON editor and paste:
-
-       {
-         "Version": "2012-10-17",
-         "Statement": [
-           {
-             "Effect": "Allow",
-             "Action": [
-               "s3:GetObject",
-               "s3:ListBucket",
-               "s3:PutObject"
-             ],
-             "Resource": [
-               "arn:aws:s3:::spending-metrics-data",
-               "arn:aws:s3:::spending-metrics-data/*"
-             ]
-           }
-         ]
-       }
-
-       Replace "spending-metrics-data" with your actual bucket name.
-       - Policy name: SpendingMetricsS3Policy
-       - Click Create policy.
-
-  5. Back in the Role creation tab, refresh and search for SpendingMetricsS3Policy.
-  6. Select it → Next
-  7. Role name: SpendingMetricsEC2Role
-  8. Click Create role.
+  5. Launch Instance. Wait for State = "running".
 
 
 ------------------------------------------------------------
-  B3. LAUNCH EC2 INSTANCE
+  C2. ALLOCATE ELASTIC IP (fixed IP that survives restarts)
 ------------------------------------------------------------
 
-  1. AWS Console → EC2 → Launch Instance
+  EC2 Console → Network & Security → Elastic IPs
+  → Allocate Elastic IP address → Allocate
+  → Select the new IP → Actions → Associate Elastic IP address
+  → Instance: portfolio-server → Associate
 
-  2. Fill in these settings:
-       Name:                  spending-metrics-server
-       Application and OS:    Ubuntu Server 24.04 LTS (HVM), SSD  64-bit x86
-       Instance type:         t3.medium  (2 vCPU, 4 GB RAM)
-                              NOTE: t2.micro is free-tier but only 1GB RAM —
-                              the PDF pipeline needs ~2GB. Use t3.medium.
-       Key pair:              Create new key pair
-                                Name: spending-metrics-key
-                                Type: RSA
-                                Format: .pem (Mac/Linux) or .ppk (Windows PuTTY)
-                              Download and SAVE this file. You cannot re-download it.
+  Note your fixed Elastic IP — use it everywhere below.
 
-  3. Network settings → Edit:
-       Create security group named: spending-metrics-sg
-       Add rules:
-         Type: SSH,    Port: 22,  Source: My IP        (your home IP only)
-         Type: HTTP,   Port: 80,  Source: 0.0.0.0/0
-         Type: HTTPS,  Port: 443, Source: 0.0.0.0/0
-
-  4. Configure storage:
-       Size: 20 GiB, Volume type: gp3
-
-  5. Advanced details → IAM instance profile:
-       Select: SpendingMetricsEC2Role   (created in B2)
-
-  6. Click Launch Instance.
-
-  7. Go to EC2 → Instances → wait for State = "running"
-     Note the Public IPv4 address (e.g. 13.233.xxx.xxx) — you need this later.
+  NOTE: Free while attached to a running instance.
+  If you stop the instance, either keep the IP associated
+  or release it (EC2 → Elastic IPs → Release) to avoid charges.
 
 
 ------------------------------------------------------------
-  B4. CONNECT TO EC2 VIA SSH
+  C3. SSH INTO EC2
 ------------------------------------------------------------
 
-  Windows (PowerShell / Windows Terminal):
+  Windows (PowerShell):
 
-    # Fix key file permissions (required on Windows)
-    icacls "C:\path\to\spending-metrics-key.pem" /inheritance:r
-    icacls "C:\path\to\spending-metrics-key.pem" /grant:r "$($env:USERNAME):(R)"
+    icacls "C:\path\to\portfolio-key.pem" /inheritance:r
+    icacls "C:\path\to\portfolio-key.pem" /grant:r "$($env:USERNAME):(R)"
+    ssh -i "C:\path\to\portfolio-key.pem" ubuntu@YOUR_ELASTIC_IP
 
-    # Connect
-    ssh -i "C:\path\to\spending-metrics-key.pem" ubuntu@YOUR_EC2_PUBLIC_IP
+  Mac/Linux:
 
-  Mac/Linux (Terminal):
+    chmod 400 ~/Downloads/portfolio-key.pem
+    ssh -i ~/Downloads/portfolio-key.pem ubuntu@YOUR_ELASTIC_IP
 
-    chmod 400 ~/Downloads/spending-metrics-key.pem
-    ssh -i ~/Downloads/spending-metrics-key.pem ubuntu@YOUR_EC2_PUBLIC_IP
-
-  You should see the Ubuntu welcome banner.
-  All commands from here run ON the EC2 server (not your local PC).
+  All commands from here run ON THE EC2 SERVER.
 
 
 ------------------------------------------------------------
-  B5. INSTALL DOCKER AND NGINX ON EC2
+  C4. ADD SWAP (prevents OOM crashes on 1GB t2.micro)
 ------------------------------------------------------------
 
-  Run these commands on the EC2 server (copy-paste the whole block):
+    sudo fallocate -l 2G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    free -h    # should show Swap: 2.0G
+
+
+------------------------------------------------------------
+  C5. INSTALL DOCKER AND NGINX
+------------------------------------------------------------
 
     sudo apt update && sudo apt upgrade -y
 
-    # Install Docker
+    # Docker
     curl -fsSL https://get.docker.com | sh
     sudo usermod -aG docker ubuntu
-
-    # Install Nginx + Certbot (for HTTPS)
-    sudo apt install -y nginx certbot python3-certbot-nginx
-
-    # Apply docker group (so you don't need sudo for docker)
     newgrp docker
+
+    # Nginx + Certbot
+    sudo apt install -y nginx certbot python3-certbot-nginx
 
     # Verify
     docker --version
@@ -318,1003 +269,310 @@ OVERVIEW OF WHAT WE ARE BUILDING
 
 
 ------------------------------------------------------------
-  B6. BUILD AND PUSH DOCKER IMAGE (run on YOUR LOCAL PC)
+  C6. RUN THE BACKEND CONTAINER
 ------------------------------------------------------------
 
-  Open a terminal on your local PC (not EC2):
-
-    cd "Usecase 2 - Spending Metrics/backend"
-
-    # Log in to Docker Hub
-    docker login
-    # Enter your Docker Hub username and password
-
-    # Build the image
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-
-    # Push to Docker Hub
-    docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-  Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username.
-  This takes 5-10 minutes (uploads ~1.5GB of layers on first push).
-
-  ALTERNATIVE — Build directly on EC2 (no Docker Hub needed):
-    # On EC2: clone or scp your backend/ folder, then:
-    docker build -t spending-metrics:latest .
-    # Skip the push step; use image name "spending-metrics:latest" below.
-
-
-------------------------------------------------------------
-  B7. RUN THE BACKEND CONTAINER ON EC2
-------------------------------------------------------------
-
-  Back on the EC2 server:
-
-    docker pull YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
+    docker pull YOUR_DOCKERHUB_USERNAME/spending-api:latest
 
     docker run -d \
       --name spending-api \
       --restart unless-stopped \
-      -p 8000:8000 \
+      --memory="900m" \
+      --memory-swap="2900m" \
+      -p 127.0.0.1:8000:8000 \
       -e MODEL=meta-llama/llama-4-scout-17b-16e-instruct \
       -e BASE_URL=https://api.groq.com/openai/v1 \
-      -e API_KEY=gsk_YOUR_ACTUAL_GROQ_KEY \
-      -e DATA_SOURCE=s3 \
-      -e S3_BUCKET=spending-metrics-data \
-      -e S3_PREFIX=monthly/ \
-      -e AWS_REGION=ap-south-1 \
-      -e ALLOWED_ORIGINS=http://YOUR_EC2_PUBLIC_IP \
+      -e API_KEY=gsk_your_actual_groq_key \
       -e FILES_DIR=/tmp/spending-files \
-      YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
+      -e ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com \
+      YOUR_DOCKERHUB_USERNAME/spending-api:latest
 
-  Replace:
-    gsk_YOUR_ACTUAL_GROQ_KEY     → your Groq API key
-    spending-metrics-data        → your S3 bucket name
-    YOUR_EC2_PUBLIC_IP           → your EC2 public IP (e.g. 13.233.xxx.xxx)
-    YOUR_DOCKERHUB_USERNAME      → your Docker Hub username
-
-  Verify the container is running:
-
-    docker ps
-    curl http://localhost:8000/health
-    # Expected output: {"status":"ok"}
-
-  View live logs:
-
-    docker logs -f spending-api
-
-
-------------------------------------------------------------
-  B8. CONFIGURE NGINX
-------------------------------------------------------------
-
-  On EC2 — first, add the rate limit zone to the main nginx config:
-
-    sudo nano /etc/nginx/nginx.conf
-
-    Inside the http { } block, add this line (before the include lines):
-      limit_req_zone $binary_remote_addr zone=api_limit:10m rate=2r/s;
-
-    Save and exit: CTRL+O, ENTER, CTRL+X
-
-  Now copy the site config:
-
-    sudo nano /etc/nginx/sites-available/spending-api
-
-    Paste the content below, replacing YOUR_DOMAIN with your actual domain
-    OR with your EC2 public IP if you don't have a domain yet:
-
-    ----------------------------------------------------------------
-    server {
-        listen 80;
-        listen [::]:80;
-        server_name YOUR_DOMAIN www.YOUR_DOMAIN;
-
-        root /var/www/spending-portfolio;
-        index index.html;
-
-        location / {
-            try_files $uri $uri/ /index.html;
-            add_header Cache-Control "public, max-age=3600";
-        }
-
-        location /assets/ {
-            try_files $uri =404;
-            add_header Cache-Control "public, max-age=31536000, immutable";
-        }
-
-        location /api/ {
-            limit_req zone=api_limit burst=5 nodelay;
-            limit_req_status 429;
-            client_max_body_size 16M;
-
-            proxy_pass http://127.0.0.1:8000/;
-            proxy_http_version 1.1;
-            proxy_set_header Host              $host;
-            proxy_set_header X-Real-IP         $remote_addr;
-            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout    300s;
-            proxy_send_timeout    300s;
-            proxy_connect_timeout 30s;
-            proxy_buffering off;
-        }
-
-        server_tokens off;
-    }
-    ----------------------------------------------------------------
-
-    Save and exit: CTRL+O, ENTER, CTRL+X
-
-  Enable the site and create the web root:
-
-    sudo ln -s /etc/nginx/sites-available/spending-api /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default
-    sudo mkdir -p /var/www/spending-portfolio
-    sudo nginx -t
-    sudo systemctl reload nginx
+  Replace: YOUR_DOCKERHUB_USERNAME, your Groq key, and yourdomain.com.
 
   Test:
-    curl http://YOUR_EC2_PUBLIC_IP
-    # You should get a 404 (frontend not deployed yet) — that is fine.
+
+    docker ps                              # should show container running
+    curl http://localhost:8000/health      # → {"status":"ok"}
+    docker logs spending-api               # view startup logs
 
 
 ------------------------------------------------------------
-  B9. BUILD AND DEPLOY FRONTEND (run on YOUR LOCAL PC)
+  C7. BUILD AND DEPLOY THE FRONTEND
 ------------------------------------------------------------
 
-  Open a terminal on your local PC:
+  Still on EC2 — install Node.js:
 
-    cd "Usecase 2 - Spending Metrics/frontend/corporate-buddy/spending-metrics"
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt install -y nodejs
 
-    # If you have a domain, set the real API URL:
-    # Edit .env and set: VITE_API_URL=http://YOUR_EC2_PUBLIC_IP/api
-    # OR after SSL: VITE_API_URL=https://yourdomain.com/api
+  Clone the repo and build:
 
-    # Create .env with the right API URL
-    # Windows PowerShell:
-    "VITE_API_URL=http://YOUR_EC2_PUBLIC_IP/api" | Out-File -FilePath .env -Encoding utf8
-
+    cd /var/www
+    sudo mkdir portfolio && sudo chown ubuntu:ubuntu portfolio
+    git clone https://github.com/SouravUndefined/Portfolio.git portfolio
+    cd portfolio/frontend
+    echo "VITE_API_URL=https://yourdomain.com" > .env
     npm install
     npm run build
 
-    # This creates a dist/ folder
-
-    # Copy dist/ to EC2
-    scp -r dist/* -i "C:\path\to\spending-metrics-key.pem" \
-        ubuntu@YOUR_EC2_PUBLIC_IP:/var/www/spending-portfolio/
-
-  Mac/Linux version of the scp command:
-    scp -r dist/* -i ~/Downloads/spending-metrics-key.pem \
-        ubuntu@YOUR_EC2_PUBLIC_IP:/var/www/spending-portfolio/
-
-  Now visit http://YOUR_EC2_PUBLIC_IP in your browser.
-  The full app should load and be usable.
+  Built site is at: /var/www/portfolio/frontend/dist/
 
 
 ------------------------------------------------------------
-  B10. ENABLE HTTPS WITH FREE SSL (requires a domain name)
+  C8. CONFIGURE NGINX
 ------------------------------------------------------------
 
-  If you have a domain, first point it to your EC2 IP:
-    Go to your domain registrar → DNS settings → Add A record:
-      Name: @         Value: YOUR_EC2_PUBLIC_IP
-      Name: www       Value: YOUR_EC2_PUBLIC_IP
-    DNS changes take 5-30 minutes to propagate.
+    sudo nano /etc/nginx/sites-available/portfolio
+
+  Paste (replace yourdomain.com):
+
+    server {
+        listen 80;
+        server_name yourdomain.com www.yourdomain.com;
+
+        root /var/www/portfolio/frontend/dist;
+        index index.html;
+
+        client_max_body_size 50M;
+
+        location ~ ^/(analyse|health|files/) {
+            proxy_pass         http://127.0.0.1:8000;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_read_timeout 1200s;
+            proxy_send_timeout 1200s;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+
+  Save: CTRL+O → ENTER → CTRL+X
+
+    sudo ln -s /etc/nginx/sites-available/portfolio /etc/nginx/sites-enabled/
+    sudo rm -f /etc/nginx/sites-enabled/default
+    sudo nginx -t
+    sudo systemctl reload nginx
+
+  Test: curl http://YOUR_ELASTIC_IP  → should return HTML
+
+
+================================================================================
+  PART D — CONNECT HOSTINGER DOMAIN + FREE SSL
+================================================================================
+
+------------------------------------------------------------
+  D1. POINT DOMAIN TO EC2 IN HOSTINGER
+------------------------------------------------------------
+
+  1. https://hpanel.hostinger.com → Domains → your domain → DNS Records
+  2. Add / edit:
+
+       Type   Name   Value               TTL
+       ----   ----   -----               ---
+       A      @      YOUR_ELASTIC_IP     300
+       A      www    YOUR_ELASTIC_IP     300
+
+  3. Remove any existing A records pointing elsewhere.
+  4. Wait 5-30 minutes for DNS to propagate.
+
+  Test: ping yourdomain.com → should return your Elastic IP.
+
+
+------------------------------------------------------------
+  D2. GET FREE SSL CERTIFICATE
+------------------------------------------------------------
 
   On EC2:
 
     sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
-    Follow the prompts:
-      - Enter your email
-      - Agree to terms: Y
-      - Share email with EFF: N (optional)
-      - Redirect HTTP to HTTPS: 2 (recommended)
+  Prompts:
+    - Enter email
+    - Agree to terms: Y
+    - Redirect HTTP to HTTPS: 2   ← always choose this
 
-    Certbot automatically updates nginx config with SSL certificates.
+  Then:
 
     sudo systemctl reload nginx
 
-  Now update your frontend to use HTTPS:
+  Visit https://yourdomain.com — padlock in browser.
 
-    On local PC — edit .env:
-      VITE_API_URL=https://yourdomain.com/api
+  Auto-renewal test:
 
-    Rebuild and redeploy:
-      npm run build
-      scp -r dist/* -i "spending-metrics-key.pem" \
-          ubuntu@YOUR_EC2_PUBLIC_IP:/var/www/spending-portfolio/
-
-    Also update ALLOWED_ORIGINS in the running Docker container:
-      docker stop spending-api
-      docker rm spending-api
-      # Re-run docker run command from B7 with:
-      #   -e ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-
-    Visit https://yourdomain.com — full app with HTTPS.
-
-  SSL certificates auto-renew. Certbot installs a cron job for this.
+    sudo certbot renew --dry-run
 
 
 ------------------------------------------------------------
-  B11. END-TO-END TEST ON AWS
+  D3. REBUILD FRONTEND WITH HTTPS URL
 ------------------------------------------------------------
 
-  1. Open your browser → https://yourdomain.com (or http://EC2_IP)
-  2. Navigate to the Spending Tool section
-  3. Upload a PDF bank statement
-  4. Wait 30-120 seconds
-  5. Download the CSV and PDF report
-
-  To verify the S3 data loading (CLI mode):
-
-    On EC2:
-      docker exec -it spending-api python spending_pipeline.py /tmp/s3-test
-
-    Or run via the API — the /analyse endpoint handles everything.
+    cd /var/www/portfolio/frontend
+    echo "VITE_API_URL=https://yourdomain.com" > .env
+    npm run build
+    sudo systemctl reload nginx
 
 
 ================================================================================
-  PART C — ENVIRONMENT VARIABLE REFERENCE
+  PART E — DEPLOYING UPDATES
 ================================================================================
 
-  Variable          Default                              Description
-  ----------------  -----------------------------------  ------------------------
-  API_KEY           (required)                           Groq API key (gsk_...)
-  MODEL             meta-llama/llama-4-scout-17b...      LLM model name
-  BASE_URL          https://api.groq.com/openai/v1       API endpoint
-  FILES_DIR         /tmp/spending-files                  Where output files go
-  ALLOWED_ORIGINS   *                                    CORS allowed origins
-  DATA_SOURCE       local                                "local" or "s3"
-  DATA_FOLDER       monthly_data                         Local folder (if local)
-  S3_BUCKET         (required if DATA_SOURCE=s3)         S3 bucket name
-  S3_PREFIX         (empty = bucket root)                Subfolder in bucket
-  AWS_REGION        ap-south-1                           AWS region
+  WHEN YOU PUSH CODE CHANGES TO GITHUB:
 
-  LOCAL DEVELOPMENT .env example:
-    API_KEY=gsk_xxxxxxxxxxxx
-    MODEL=meta-llama/llama-4-scout-17b-16e-instruct
-    BASE_URL=https://api.groq.com/openai/v1
-    FILES_DIR=/tmp/spending-files
-    ALLOWED_ORIGINS=http://localhost:3000
-    DATA_SOURCE=local
-    DATA_FOLDER=../monthly_data
+  ── Backend code changed ──────────────────────────────────
 
-  AWS PRODUCTION .env (or docker run -e flags):
-    API_KEY=gsk_xxxxxxxxxxxx
-    MODEL=meta-llama/llama-4-scout-17b-16e-instruct
-    BASE_URL=https://api.groq.com/openai/v1
-    FILES_DIR=/tmp/spending-files
-    ALLOWED_ORIGINS=https://yourdomain.com
-    DATA_SOURCE=s3
-    S3_BUCKET=spending-metrics-data
-    S3_PREFIX=monthly/
-    AWS_REGION=ap-south-1
+  On local PC — rebuild and push image:
 
+    cd Portfolio/backend/budget-tracker
+    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
+    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
 
-================================================================================
-  PART D — HOW TO UPDATE / REDEPLOY
-================================================================================
+  On EC2 — pull and restart:
 
-  UPDATING BACKEND CODE
-  ----------------------
-  On local PC:
+    docker pull YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker stop spending-api
+    docker rm spending-api
+    # Re-run the docker run command from C6
 
-    cd backend
-    # Make your code changes, then:
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-    docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
+  ── Frontend code changed ─────────────────────────────────
 
   On EC2:
 
-    docker pull YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-    docker stop spending-api
-    docker rm spending-api
-    # Re-run the docker run command from B7
+    cd /var/www/portfolio
+    git pull
+    cd frontend && npm run build
+    sudo systemctl reload nginx
 
+  ── Both changed ──────────────────────────────────────────
 
-  UPDATING FRONTEND CODE
-  -----------------------
-  On local PC:
-
-    cd frontend/corporate-buddy/spending-metrics
-    npm run build
-    scp -r dist/* -i "spending-metrics-key.pem" \
-        ubuntu@YOUR_EC2_PUBLIC_IP:/var/www/spending-portfolio/
-
-
-  ADDING A PYTHON DEPENDENCY
-  ---------------------------
-  On local PC in backend/:
-
-    uv add some-package
-    # This updates pyproject.toml and uv.lock automatically
-
-  Then rebuild and redeploy the Docker image (steps above).
-
-
-  VIEWING BACKEND LOGS ON EC2
-  ----------------------------
-    docker logs spending-api              # all logs
-    docker logs -f spending-api           # live tail
-    docker logs --tail 50 spending-api    # last 50 lines
+  Do both steps above in order (backend first, then frontend).
 
 
 ================================================================================
-  PART E — TROUBLESHOOTING
+  PART F — ALTERNATIVE: RENDER.COM (always free, no credit card)
 ================================================================================
 
-  ISSUE: "No transactions found in this PDF"
-  FIX:   - Make sure your Groq API key is correct in .env
-         - The PDF must be a real bank/UPI/CC statement (not a screenshot)
-         - Check backend logs: docker logs spending-api
+  Use this if you don't want to manage EC2 at all.
+  Trade-off: backend spins down after 15 min idle → 30-60s cold start.
+  Front end on Vercel: always on, instant.
 
-  ISSUE: Backend starts but returns 500 error
+  ── F1. Deploy backend on Render ──────────────────────────
+
+  1. https://render.com → New → Web Service
+  2. Deploy an existing image from a registry
+  3. Image URL: docker.io/YOUR_DOCKERHUB_USERNAME/spending-api:latest
+  4. Instance Type: Free
+  5. Environment Variables (add each):
+       API_KEY        gsk_your_groq_key
+       MODEL          meta-llama/llama-4-scout-17b-16e-instruct
+       BASE_URL       https://api.groq.com/openai/v1
+       FILES_DIR      /tmp/spending-files
+       ALLOWED_ORIGINS *
+  6. Create Web Service
+  7. Your backend URL: https://spending-api-xxxx.onrender.com
+  8. Test: https://spending-api-xxxx.onrender.com/health
+
+  ── F2. Deploy frontend on Vercel ─────────────────────────
+
+  1. https://vercel.com → New Project → Import GitHub repo
+  2. Framework: Vite
+  3. Root Directory: frontend
+  4. Environment Variable:
+       VITE_API_URL = https://spending-api-xxxx.onrender.com
+  5. Deploy → your URL: https://portfolio-xxxx.vercel.app
+
+  ── F3. Update ALLOWED_ORIGINS in Render ──────────────────
+
+  Render → your service → Environment → update:
+    ALLOWED_ORIGINS = https://portfolio-xxxx.vercel.app
+
+  ── F4. Updating backend on Render ────────────────────────
+
+    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
+    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
+
+  Then on Render: Manual Deploy → Deploy latest image
+
+
+================================================================================
+  PART G — TROUBLESHOOTING
+================================================================================
+
+  ISSUE: docker run exits immediately
   FIX:   docker logs spending-api
-         Look for "API_KEY" or "RuntimeError" in the output.
-         Usually means the Groq key is missing or wrong.
-
-  ISSUE: Frontend shows "Network Error" or cannot connect to API
-  FIX:   - Confirm backend is running: curl http://localhost:8000/health
-         - Check VITE_API_URL in frontend/.env matches the backend URL
-         - Rebuild frontend after changing .env: npm run build
-
-  ISSUE: Docker container crashes on EC2
-  FIX:   docker logs spending-api
-         If "killed" — the instance ran out of RAM. Upgrade to t3.medium.
+         Usually a missing env var. Check API_KEY is set correctly.
 
   ISSUE: Nginx 502 Bad Gateway
-  FIX:   - Check container is running: docker ps
-         - Check container is healthy: curl http://localhost:8000/health
-         - Restart container: docker restart spending-api
+  FIX:   docker ps — is container running?
+         docker restart spending-api
+         curl http://localhost:8000/health
 
-  ISSUE: PDF upload fails with "413 Request Entity Too Large"
-  FIX:   Nginx is blocking it. Check client_max_body_size 16M is in nginx.conf.
-         Reload nginx: sudo systemctl reload nginx
+  ISSUE: "413 Request Entity Too Large"
+  FIX:   client_max_body_size 50M must be in nginx config.
+         sudo nginx -t && sudo systemctl reload nginx
 
-  ISSUE: SSL certificate error
-  FIX:   sudo certbot renew --dry-run
-         If it fails, check your domain DNS points to the correct EC2 IP.
+  ISSUE: Upload times out (Groq rate limit)
+  FIX:   500K token daily limit exhausted. Wait until midnight UTC.
+         Check: https://console.groq.com/ → Usage
 
-  ISSUE: uv sync fails with build errors (local dev)
-  FIX:   Make sure Python 3.12 is installed. Run:
-           uv python install 3.12
-           uv sync --python 3.12
+  ISSUE: SSL cert fails / expired
+  FIX:   sudo certbot renew --force-renewal
+         DNS must still point to your Elastic IP.
 
-  USEFUL COMMANDS ON EC2
-  -----------------------
-    docker ps                          # list running containers
-    docker stats spending-api          # CPU / RAM usage of container
-    docker restart spending-api        # restart without removing
-    sudo systemctl status nginx        # nginx status
-    sudo nginx -t                      # test nginx config syntax
-    sudo systemctl reload nginx        # apply nginx config changes
-    df -h                              # disk usage
-    free -h                            # RAM usage
+  ISSUE: Container killed (OOM on t2.micro)
+  FIX:   free -h → check swap is active (should show 2G)
+         If not: sudo swapon /swapfile
 
+  ISSUE: Downloads return 404
+  FIX:   nginx location must include files/:
+           location ~ ^/(analyse|health|files/) { ... }
 
-================================================================================
-  COST ESTIMATE (AWS)
-================================================================================
-
-  Service         Usage                   Estimated Monthly Cost (USD)
-  --------------  ----------------------  -----------------------------
-  EC2 t3.medium   720 hrs/month           ~$30
-  S3 storage      < 1 GB of PDFs          ~$0.02
-  S3 requests     Light usage             ~$0.01
-  Data transfer   Light usage             ~$1
-  SSL cert        Certbot (Let's Encrypt) FREE
-  Groq API        Vision model            FREE (up to rate limits)
-  --------------  ----------------------  -----------------------------
-  TOTAL                                   ~$31/month
-
-  To reduce cost: Stop the EC2 instance when not in use.
-  To stop:  AWS Console → EC2 → select instance → Instance State → Stop
-  NOTE: Stopping changes your public IP. You will need to update DNS and
-  ALLOWED_ORIGINS when you restart. Use an Elastic IP to keep a fixed IP.
+  USEFUL COMMANDS
+  ---------------
+    docker ps                           # running containers
+    docker logs -f spending-api         # live logs
+    docker stats spending-api           # CPU + RAM usage
+    docker restart spending-api         # restart without rebuild
+    sudo systemctl status nginx         # nginx status
+    sudo nginx -t                       # test config
+    sudo systemctl reload nginx         # apply config
+    df -h                               # disk usage
+    free -h                             # RAM + swap
 
 
 ================================================================================
-  PART F — AWS FREE TIER (12 Months Free for New AWS Accounts)
+  PLATFORM COMPARISON
 ================================================================================
 
-  AWS gives new accounts 12 months of free usage including:
-    EC2 t2.micro  — 750 hours/month (runs 24/7 for free)
-    S3            — 5 GB storage, 20,000 GET requests, 2,000 PUT requests/month
-    Data transfer — 100 GB outbound/month
+  Platform          Cost          Always On   Setup Time   Switch Cost
+  ----------------  ----------    ----------  -----------  -----------
+  AWS EC2 t2.micro  Free 12mo     Yes         ~30 min      docker pull
+  AWS EC2 t3.small  ~$15/mo       Yes         ~30 min      docker pull
+  Render.com        Free          No (15min)  ~10 min      Re-configure
+  Oracle Cloud      Free forever  Yes         ~45 min      docker pull
+  GCP Cloud Run     Pay-per-use   Yes         ~20 min      docker push
 
-  After 12 months you pay ~$8-10/month (t2.micro is cheaper than t3.medium).
-  If your account is new (within 12 months), this entire setup is FREE.
-
-  NOTE: t2.micro has only 1 GB RAM. The PDF pipeline can be memory-heavy.
-  We add a 2 GB swap file on the EC2 instance to handle this safely.
-
-  Everything else follows PART B exactly — the only differences are:
-    - Instance type: t2.micro instead of t3.medium
-    - Add swap file after launching (Step F2 below)
-    - S3 stays the same (free tier covers light usage)
-
-
-------------------------------------------------------------
-  F1. CHECK YOUR AWS FREE TIER STATUS
-------------------------------------------------------------
-
-  1. Sign in to AWS Console → https://console.aws.amazon.com
-  2. Top-right corner → your account name → Billing and Cost Management
-  3. Click "Free Tier" in the left menu
-  4. You should see "EC2 - t2.micro - 750 Hrs" listed as available
-
-  If you do NOT see free tier — your 12 months have expired.
-  Options: create a new AWS account with a different email, or
-  use Part G (Render + Vercel — always free, no time limit).
-
-
-------------------------------------------------------------
-  F2. LAUNCH EC2 ON FREE TIER
-------------------------------------------------------------
-
-  Follow ALL steps in PART B (B1 through B11) with these changes:
-
-  CHANGE 1 — Instance type in Step B3:
-    Choose: t2.micro  (instead of t3.medium)
-    This is the free-tier eligible instance.
-
-  CHANGE 2 — After SSH-ing into EC2 (Step B4), add a swap file FIRST:
-
-    This gives the 1 GB instance an extra 2 GB of virtual memory
-    so the PDF pipeline does not crash under heavy load.
-
-    Run these commands on EC2 right after connecting:
-
-      sudo fallocate -l 2G /swapfile
-      sudo chmod 600 /swapfile
-      sudo mkswap /swapfile
-      sudo swapon /swapfile
-      echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-      free -h
-
-    You should now see "Swap: 2.0G" in the output.
-    This persists across reboots automatically.
-
-  CHANGE 3 — Docker run command in Step B7:
-    Add this flag to limit container memory and prevent OOM kills:
-
-      --memory="900m" \
-      --memory-swap="2900m" \
-
-    Full docker run command for t2.micro:
-
-      docker run -d \
-        --name spending-api \
-        --restart unless-stopped \
-        --memory="900m" \
-        --memory-swap="2900m" \
-        -p 8000:8000 \
-        -e MODEL=meta-llama/llama-4-scout-17b-16e-instruct \
-        -e BASE_URL=https://api.groq.com/openai/v1 \
-        -e API_KEY=gsk_YOUR_ACTUAL_GROQ_KEY \
-        -e DATA_SOURCE=s3 \
-        -e S3_BUCKET=spending-metrics-data \
-        -e S3_PREFIX=monthly/ \
-        -e AWS_REGION=ap-south-1 \
-        -e ALLOWED_ORIGINS=http://YOUR_EC2_PUBLIC_IP \
-        -e FILES_DIR=/tmp/spending-files \
-        YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-  All other steps (Nginx, SSL, frontend deploy) are identical to PART B.
-
-
-------------------------------------------------------------
-  F3. AWS FREE TIER COST BREAKDOWN
-------------------------------------------------------------
-
-  Service         Free Tier Limit                 Cost During Free Year
-  --------------  ------------------------------  ---------------------
-  EC2 t2.micro    750 hrs/month (enough for 24/7) FREE
-  S3              5 GB, 20K GETs, 2K PUTs/month   FREE (light usage)
-  Data Transfer   15 GB outbound/month             FREE
-  SSL (Certbot)   Let's Encrypt                    FREE
-  Groq API        Free tier (30 req/min)           FREE
-  Docker Hub      1 private repo free              FREE
-  --------------  ------------------------------  ---------------------
-  TOTAL                                            FREE for 12 months
-
-  After 12 months:
-    EC2 t2.micro  ~$8.50/month
-    S3            ~$0.05/month
-    Total         ~$8.55/month
-
-
-------------------------------------------------------------
-  F4. KEEP AWS COSTS ZERO — TIPS
-------------------------------------------------------------
-
-  1. Set a billing alert so you get emailed if charges exceed $1:
-       AWS Console → Billing → Budgets → Create Budget
-       Type: Cost budget → Amount: $1 → Email alert at 80%
-
-  2. Stop EC2 when not using it:
-       AWS Console → EC2 → select instance → Instance State → Stop
-       Stopped instances do NOT use free-tier hours.
-       NOTE: Stopping changes your public IP. Use an Elastic IP
-       (free when attached to a running instance) to keep a fixed IP:
-         EC2 → Elastic IPs → Allocate → Associate to your instance
-
-  3. Stay within S3 free limits:
-       5 GB storage — more than enough for PDF statements
-       20,000 GET requests/month — fine for personal use
-
-  4. Monitor free tier usage:
-       AWS Console → Billing → Free Tier
-       Shows % used for each service this month
+  To move from EC2 to any other platform: just docker pull the same image
+  and pass the same environment variables. No code changes needed.
 
 
 ================================================================================
-  PART G — ALWAYS FREE HOSTING (Zero Cost, No Time Limit, No Credit Card)
+  COST SUMMARY
 ================================================================================
 
-  Stack:  Frontend → Vercel (free forever)
-          Backend  → Render.com (free tier, Docker support)
-
-  LIMITATIONS OF FREE TIER
-  -------------------------
-  Render free tier spins down the backend after 15 minutes of no traffic.
-  First request after idle takes ~30-60 seconds (cold start) — then normal.
-  This is fine for personal/demo use. For always-on, use AWS (Part B or F).
-
-
-------------------------------------------------------------
-  G1. PREREQUISITES FOR FREE HOSTING
-------------------------------------------------------------
-
-  You need these accounts (all free, no credit card):
-    1. GitHub account          https://github.com        (store your code)
-    2. Vercel account          https://vercel.com        (frontend hosting)
-    3. Render account          https://render.com        (backend hosting)
-    4. Docker Hub account      https://hub.docker.com    (store Docker image)
-    5. Groq API key            https://console.groq.com  (AI vision API)
-
-
-------------------------------------------------------------
-  G2. PUSH YOUR CODE TO GITHUB
-------------------------------------------------------------
-
-  Step 1 — Create a new GitHub repository:
-    - Go to https://github.com/new
-    - Repository name: spending-metrics
-    - Visibility: Private (recommended — your API keys are in .env)
-    - Do NOT add README or .gitignore (you already have one)
-    - Click Create repository
-
-  Step 2 — Initialize git and push from your local PC:
-
-    cd "Usecase 2 - Spending Metrics"
-
-    git init
-    git add .
-    git commit -m "Initial commit"
-    git branch -M main
-    git remote add origin https://github.com/YOUR_GITHUB_USERNAME/spending-metrics.git
-    git push -u origin main
-
-    IMPORTANT: Make sure .gitignore includes:
-      .env
-      __pycache__/
-      *.pyc
-      backend/.venv/
-      frontend/corporate-buddy/spending-metrics/node_modules/
-      frontend/corporate-buddy/spending-metrics/dist/
-
-    If your .gitignore is missing these, add them before pushing:
-
-      Windows PowerShell:
-        Add-Content .gitignore "`n.env`n__pycache__/`n*.pyc`nbackend/.venv/`nnode_modules/`ndist/"
-
-
-------------------------------------------------------------
-  G3. DEPLOY BACKEND ON RENDER.COM (free Docker hosting)
-------------------------------------------------------------
-
-  Step 1 — Build and push your Docker image to Docker Hub:
-
-    On your local PC:
-
-      cd "Usecase 2 - Spending Metrics/backend"
-
-      docker login
-      docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-      docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-  Step 2 — Create a Web Service on Render:
-
-    1. Go to https://render.com → Sign up / Log in
-    2. Click New + → Web Service
-    3. Choose: Deploy an existing image from a registry
-    4. Image URL: docker.io/YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-    5. Click Connect
-
-  Step 3 — Configure the service:
-
-    Name:              spending-metrics-api
-    Region:            Oregon (US West)
-    Instance Type:     Free  ← select this
-
-  Step 4 — Add Environment Variables:
-    Click "Add Environment Variable" for each:
-
-      Key                   Value
-      ---                   -----
-      API_KEY               gsk_your_groq_key_here
-      MODEL                 meta-llama/llama-4-scout-17b-16e-instruct
-      BASE_URL              https://api.groq.com/openai/v1
-      FILES_DIR             /tmp/spending-files
-      DATA_SOURCE           local
-      ALLOWED_ORIGINS       *
-
-  Step 5 — Click Create Web Service
-
-    Render pulls your Docker image and starts the container.
-    Wait 3-5 minutes for first deploy.
-
-    Your backend URL:  https://spending-metrics-api.onrender.com
-    Test it:          https://spending-metrics-api.onrender.com/health
-    Expected:         {"status":"ok"}
-
-    COPY THIS URL — you need it for the frontend.
-
-
-------------------------------------------------------------
-  G4. DEPLOY FRONTEND ON VERCEL (free static hosting)
-------------------------------------------------------------
-
-  Step 1 — Go to https://vercel.com → Sign up with your GitHub account
-
-  Step 2 — Click Add New → Project
-
-  Step 3 — Import your GitHub repository (spending-metrics)
-
-  Step 4 — Configure the project:
-
-    Framework Preset:   Vite
-    Root Directory:     frontend/corporate-buddy/spending-metrics
-                        (click Edit and type this path)
-    Build Command:      npm run build          (auto-detected)
-    Output Directory:   dist                   (auto-detected)
-
-  Step 5 — Add Environment Variable:
-
-    Name:   VITE_API_URL
-    Value:  https://spending-metrics-api.onrender.com/api
-
-  Step 6 — Click Deploy
-
-    Your frontend URL:  https://spending-metrics-xxxx.vercel.app
-    Takes 1-2 minutes.
-
-  Step 7 — Update ALLOWED_ORIGINS in Render:
-
-    Render → spending-metrics-api → Environment → Update:
-      ALLOWED_ORIGINS = https://spending-metrics-xxxx.vercel.app
-
-    Render redeploys automatically.
-
-
-------------------------------------------------------------
-  G5. HOW TO UPDATE YOUR FREE-HOSTED APP
-------------------------------------------------------------
-
-  UPDATING BACKEND:
-
-    cd backend
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-    docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-    Then on Render: Manual Deploy → Deploy latest image
-
-  UPDATING FRONTEND:
-
-    git add .
-    git commit -m "Update frontend"
-    git push
-
-    Vercel auto-deploys within 1-2 minutes. No manual steps.
-
-
-------------------------------------------------------------
-  G6. FREE TIER LIMITS SUMMARY
-------------------------------------------------------------
-
-  Service   Free Limits                        Spin-down?
-  --------  ---------------------------------  ----------
-  Vercel    Unlimited, 100GB/month bandwidth   No
-  Render    512MB RAM, 750 hrs/month           Yes (15min idle)
-  Groq      ~30 req/min                        No
-  Docker    1 private image free               No
-
-
-  ALWAYS-ON FREE ALTERNATIVE FOR BACKEND (no spin-down):
-  Oracle Cloud Always Free Tier — 2 ARM VMs (1 GB RAM each) forever:
-    https://www.oracle.com/cloud/free/
-    - Requires credit card to sign up (NOT charged)
-    - Provision a free ARM VM → install Docker → run your container
-    - Exactly like Part B (EC2 steps) but free forever
-
-
-------------------------------------------------------------
-  G7. COMPLETE FREE SETUP CHECKLIST
-------------------------------------------------------------
-
-  [ ] Created GitHub repo and pushed code
-  [ ] Built Docker image and pushed to Docker Hub
-  [ ] Created Render Web Service with Docker image
-  [ ] Added all environment variables in Render
-  [ ] Got backend URL (https://xxx.onrender.com)
-  [ ] Tested backend: https://xxx.onrender.com/health → {"status":"ok"}
-  [ ] Created Vercel project, set Root Directory correctly
-  [ ] Added VITE_API_URL in Vercel environment variables
-  [ ] Deployed frontend — got Vercel URL
-  [ ] Updated ALLOWED_ORIGINS in Render to Vercel URL
-  [ ] Tested: uploaded PDF → got CSV + report download links
-
-
-================================================================================
-  END OF SETUP GUIDE
-================================================================================
-
-  Stack:  Frontend → Vercel (free forever)
-          Backend  → Render.com (free tier, Docker support)
-
-  LIMITATIONS OF FREE TIER
-  -------------------------
-  Render free tier spins down the backend after 15 minutes of no traffic.
-  First request after idle takes ~30-60 seconds (cold start) — then normal.
-  This is fine for personal/demo use. For always-on, use AWS (Part B) or
-  Oracle Cloud Free Tier (see note at bottom of this section).
-
-
-------------------------------------------------------------
-  F1. PREREQUISITES FOR FREE HOSTING
-------------------------------------------------------------
-
-  You need these accounts (all free, no credit card):
-    1. GitHub account          https://github.com        (store your code)
-    2. Vercel account          https://vercel.com        (frontend hosting)
-    3. Render account          https://render.com        (backend hosting)
-    4. Docker Hub account      https://hub.docker.com    (store Docker image)
-    5. Groq API key            https://console.groq.com  (AI vision API)
-
-
-------------------------------------------------------------
-  F2. PUSH YOUR CODE TO GITHUB
-------------------------------------------------------------
-
-  Step 1 — Create a new GitHub repository:
-    - Go to https://github.com/new
-    - Repository name: spending-metrics
-    - Visibility: Private (recommended — your API keys are in .env)
-    - Do NOT add README or .gitignore (you already have one)
-    - Click Create repository
-
-  Step 2 — Initialize git and push from your local PC:
-
-    cd "Usecase 2 - Spending Metrics"
-
-    git init
-    git add .
-    git commit -m "Initial commit"
-    git branch -M main
-    git remote add origin https://github.com/YOUR_GITHUB_USERNAME/spending-metrics.git
-    git push -u origin main
-
-    IMPORTANT: Make sure .gitignore includes:
-      .env
-      __pycache__/
-      *.pyc
-      backend/.venv/
-      frontend/corporate-buddy/spending-metrics/node_modules/
-      frontend/corporate-buddy/spending-metrics/dist/
-
-    If your .gitignore is missing these, add them before pushing:
-
-      Windows PowerShell:
-        Add-Content .gitignore "`n.env`n__pycache__/`n*.pyc`nbackend/.venv/`nnode_modules/`ndist/"
-
-
-------------------------------------------------------------
-  F3. DEPLOY BACKEND ON RENDER.COM (free Docker hosting)
-------------------------------------------------------------
-
-  Step 1 — Build and push your Docker image to Docker Hub:
-
-    On your local PC:
-
-      cd "Usecase 2 - Spending Metrics/backend"
-
-      docker login
-      docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-      docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-  Step 2 — Create a Web Service on Render:
-
-    1. Go to https://render.com → Sign up / Log in
-    2. Click New + → Web Service
-    3. Choose: Deploy an existing image from a registry
-    4. Image URL: docker.io/YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-    5. Click Connect
-
-  Step 3 — Configure the service:
-
-    Name:              spending-metrics-api
-    Region:            Oregon (US West) — closest free region
-    Instance Type:     Free  ← select this
-
-  Step 4 — Add Environment Variables:
-    Click "Add Environment Variable" for each one below:
-
-      Key                   Value
-      ---                   -----
-      API_KEY               gsk_your_groq_key_here
-      MODEL                 meta-llama/llama-4-scout-17b-16e-instruct
-      BASE_URL              https://api.groq.com/openai/v1
-      FILES_DIR             /tmp/spending-files
-      DATA_SOURCE           local
-      ALLOWED_ORIGINS       *
-
-    NOTE: Set ALLOWED_ORIGINS=* for now.
-    You will update it to your Vercel URL after deploying the frontend.
-
-  Step 5 — Click Create Web Service
-
-    Render will pull your Docker image and start the container.
-    Wait 2-5 minutes for first deploy.
-
-    Your backend URL will be:
-      https://spending-metrics-api.onrender.com
-
-    Test it:
-      https://spending-metrics-api.onrender.com/health
-      Expected: {"status":"ok"}
-
-    COPY THIS URL — you need it for the frontend step.
-
-
-------------------------------------------------------------
-  F4. DEPLOY FRONTEND ON VERCEL (free static hosting)
-------------------------------------------------------------
-
-  Step 1 — Go to https://vercel.com → Sign up with your GitHub account
-
-  Step 2 — Click Add New → Project
-
-  Step 3 — Import your GitHub repository (spending-metrics)
-
-  Step 4 — Configure the project:
-
-    Framework Preset:   Vite
-    Root Directory:     frontend/corporate-buddy/spending-metrics
-                        (click Edit and type this path)
-    Build Command:      npm run build          (auto-detected)
-    Output Directory:   dist                   (auto-detected)
-    Install Command:    npm install             (auto-detected)
-
-  Step 5 — Add Environment Variable:
-
-    Name:   VITE_API_URL
-    Value:  https://spending-metrics-api.onrender.com/api
-
-    Replace with your actual Render backend URL from F3.
-
-  Step 6 — Click Deploy
-
-    Vercel builds and deploys automatically.
-    Takes about 1-2 minutes.
-
-    Your frontend URL will be:
-      https://spending-metrics-xxxx.vercel.app
-
-    Or you can add a custom subdomain like:
-      https://spending.vercel.app  (if name is available)
-
-  Step 7 — Update ALLOWED_ORIGINS in Render:
-
-    Go to Render → spending-metrics-api → Environment
-    Update ALLOWED_ORIGINS to your Vercel URL:
-      ALLOWED_ORIGINS=https://spending-metrics-xxxx.vercel.app
-
-    Click Save Changes → Render will redeploy automatically.
-
-
-------------------------------------------------------------
-  F5. ADD A FREE CUSTOM DOMAIN (optional)
-------------------------------------------------------------
-
-  OPTION A — Free subdomain from Vercel:
-    Vercel gives you: yourproject.vercel.app
-    This is already a clean free URL — no extra setup needed.
-
-  OPTION B — Free domain from Freenom (.tk/.ml/.ga/.cf):
-    1. Go to https://www.freenom.com → search for a free domain
-    2. Register a .tk or .ml domain (free for 12 months)
-    3. In Vercel → Project Settings → Domains → Add domain
-    4. Enter your domain → follow DNS instructions
-
-  OPTION C — Cheap paid domain (~$1-3/year):
-    Namecheap often has .xyz or .online domains for $1/year
-    Worth it for a cleaner URL (e.g. spendingmetrics.xyz)
-
-  After adding domain in Vercel:
-    - Vercel gives you free SSL automatically (via Let's Encrypt)
-    - No Nginx or Certbot needed — Vercel handles all of it
-
-
-------------------------------------------------------------
-  F6. HOW TO UPDATE YOUR FREE-HOSTED APP
-------------------------------------------------------------
-
-  UPDATING BACKEND:
-
-    On local PC:
-      cd backend
-      # Make changes, then:
-      docker build -t YOUR_DOCKERHUB_USERNAME/spending-metrics:latest .
-      docker push YOUR_DOCKERHUB_USERNAME/spending-metrics:latest
-
-    On Render:
-      Go to your service → Manual Deploy → Deploy latest image
-      OR set up auto-deploy webhook in Render settings
-
-  UPDATING FRONTEND:
-
-    On local PC:
-      git add .
-      git commit -m "Update frontend"
-      git push
-
-    Vercel detects the push and auto-deploys within 1-2 minutes.
-    No manual steps needed.
-
-
-------------------------------------------------------------
-  F7. FREE TIER LIMITS SUMMARY
-------------------------------------------------------------
-
-  Service   Free Limits                       Good For?
-  --------  --------------------------------  ----------------------------
-  Vercel    Unlimited deploys, 100GB/month    YES — frontend is perfect
-            bandwidth, custom domain, SSL
-  Render    750 hrs/month, 512MB RAM,         YES — light/demo use
-            spins down after 15min idle,      NO  — production/always-on
-            no custom domain on free tier
-  Docker    Unlimited public images, 1        YES — fine for this project
-  Hub       private image free
-  Groq      ~30 req/min free, no billing      YES — more than enough
-
-
-  ALWAYS-ON FREE ALTERNATIVE FOR BACKEND:
-  Oracle Cloud Always Free Tier gives 2 ARM VMs (1 GB RAM each) forever:
-    https://www.oracle.com/cloud/free/
-    - Requires credit card to sign up (NOT charged)
-    - After sign up, provision a free ARM VM (Ampere A1)
-    - Install Docker + run your container exactly like Part B (EC2 steps)
-    - This is fully always-on with no spin-down and no monthly cost
-
-
-------------------------------------------------------------
-  F8. COMPLETE FREE SETUP CHECKLIST
-------------------------------------------------------------
-
-  [ ] Created GitHub repo and pushed code
-  [ ] Built Docker image and pushed to Docker Hub
-  [ ] Created Render Web Service with Docker image
-  [ ] Added all 6 environment variables in Render
-  [ ] Got backend URL (https://xxx.onrender.com)
-  [ ] Tested backend health endpoint
-  [ ] Created Vercel project, set Root Directory correctly
-  [ ] Added VITE_API_URL environment variable in Vercel
-  [ ] Deployed frontend on Vercel
-  [ ] Updated ALLOWED_ORIGINS in Render to Vercel URL
-  [ ] Tested full flow: upload PDF → download CSV + report
+  Service          Free Tier                     After 12 Months
+  ---------------  ---------------------------   ----------------
+  EC2 t2.micro     750 hrs/month (full 24/7)     ~$8.50/month
+  Elastic IP       Free (while instance runs)    Free
+  SSL Certbot      Free forever                  Free
+  Docker Hub       Free (1 public image)         Free
+  Groq API         500K tokens/day               Free
+  ---------------  ---------------------------   ----------------
+  TOTAL YEAR 1:    $0                            ~$8.50/month
+
+  TIP: Set a $1 billing alert:
+  AWS Console → Billing → Budgets → Create Budget → Cost → $1 → email alert
 
 
 ================================================================================

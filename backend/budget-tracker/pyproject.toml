@@ -1,0 +1,26 @@
+[project]
+name = "spending-metrics"
+version = "0.1.0"
+description = "Personal spending analyser — vision-based PDF parser and report generator"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "gunicorn==23.0.0",
+    "python-multipart==0.0.20",
+    "pymupdf==1.24.14",
+    "openai==1.58.1",
+    "pandas==2.2.3",
+    "openpyxl==3.1.5",
+    "python-dotenv==1.0.1",
+    "matplotlib==3.9.4",
+    "seaborn==0.13.2",
+    "numpy==1.26.4",
+    "boto3==1.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+]

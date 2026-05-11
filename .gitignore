@@ -1,0 +1,26 @@
+# environment / secrets
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# Personal financial data — never commit
+local-database/
+
+# Temp output files
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db

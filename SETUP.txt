@@ -129,9 +129,9 @@ PROJECT STRUCTURE
 
     cd Portfolio/backend/budget-tracker
 
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
+    docker build -t souravm47/portfolio:latest .
 
-  Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username.
+  Replace souravm47 with your actual Docker Hub username.
   First build takes 5-10 minutes (downloads Python base + installs packages).
   Subsequent builds are fast (Docker layer cache).
 
@@ -145,7 +145,7 @@ PROJECT STRUCTURE
       -e MODEL=meta-llama/llama-4-scout-17b-16e-instruct \
       -e BASE_URL=https://api.groq.com/openai/v1 \
       -e ALLOWED_ORIGINS=http://localhost:3000 \
-      YOUR_DOCKERHUB_USERNAME/spending-api:latest
+      souravm47/portfolio:latest
 
   Test: http://localhost:8000/health → {"status":"ok"}
   Stop: CTRL+C
@@ -155,13 +155,13 @@ PROJECT STRUCTURE
   B4. PUSH TO DOCKER HUB
 ------------------------------------------------------------
 
-    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker push souravm47/portfolio:latest
 
   First push takes 3-8 minutes (uploads ~600MB of layers).
   Subsequent pushes only upload changed layers (usually < 1 minute).
 
   Your image is now at:
-    https://hub.docker.com/r/YOUR_DOCKERHUB_USERNAME/spending-api
+    https://hub.docker.com/r/souravm47/portfolio
 
 
 ================================================================================
@@ -272,7 +272,7 @@ COST
   C6. RUN THE BACKEND CONTAINER
 ------------------------------------------------------------
 
-    docker pull YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker pull souravm47/portfolio:latest
 
     docker run -d \
       --name spending-api \
@@ -285,9 +285,9 @@ COST
       -e API_KEY=gsk_your_actual_groq_key \
       -e FILES_DIR=/tmp/spending-files \
       -e ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com \
-      YOUR_DOCKERHUB_USERNAME/spending-api:latest
+      souravm47/portfolio:latest
 
-  Replace: YOUR_DOCKERHUB_USERNAME, your Groq key, and yourdomain.com.
+  Replace: souravm47, your Groq key, and yourdomain.com.
 
   Test:
 
@@ -425,12 +425,12 @@ COST
   On local PC — rebuild and push image:
 
     cd Portfolio/backend/budget-tracker
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
-    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker build -t souravm47/portfolio:latest .
+    docker push souravm47/portfolio:latest
 
   On EC2 — pull and restart:
 
-    docker pull YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker pull souravm47/portfolio:latest
     docker stop spending-api
     docker rm spending-api
     # Re-run the docker run command from C6
@@ -461,7 +461,7 @@ COST
 
   1. https://render.com → New → Web Service
   2. Deploy an existing image from a registry
-  3. Image URL: docker.io/YOUR_DOCKERHUB_USERNAME/spending-api:latest
+  3. Image URL: docker.io/souravm47/portfolio:latest
   4. Instance Type: Free
   5. Environment Variables (add each):
        API_KEY        gsk_your_groq_key
@@ -489,8 +489,8 @@ COST
 
   ── F4. Updating backend on Render ────────────────────────
 
-    docker build -t YOUR_DOCKERHUB_USERNAME/spending-api:latest .
-    docker push YOUR_DOCKERHUB_USERNAME/spending-api:latest
+    docker build -t souravm47/portfolio:latest .
+    docker push souravm47/portfolio:latest
 
   Then on Render: Manual Deploy → Deploy latest image
 

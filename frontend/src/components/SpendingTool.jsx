@@ -188,11 +188,11 @@ function Idle({ files, dragging, error, inputRef, onDrop, onDragOver, onDragLeav
       )}
 
       <button onClick={onStart} disabled={!files.length}
-              className="w-full py-3 bg-gradient-to-r from-violet-600 to-rose-500
-                         hover:from-violet-500 hover:to-rose-400
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500
+                         hover:from-blue-500 hover:to-cyan-400
                          disabled:opacity-40 disabled:cursor-not-allowed
                          text-white font-semibold rounded-xl
-                         transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-violet-600/30">
+                         transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-600/30">
         Analyse My Spending{files.length > 1 ? ` (${files.length} files)` : ''}
       </button>
 

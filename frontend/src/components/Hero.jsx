@@ -1,64 +1,62 @@
-import { Code2, Camera, Sparkles } from 'lucide-react'
+import { ArrowDown } from 'lucide-react'
 
 export default function Hero() {
   return (
-    <section id="home" className="hero-bg relative min-h-screen flex items-center justify-center px-6 pt-20 pb-24">
-      {/* Decorative blurred orbs */}
-      <div className="absolute top-10 left-10 w-72 h-72 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-rose-600/20 rounded-full blur-3xl pointer-events-none" />
+    <section id="home" className="hero-bg relative min-h-screen flex flex-col items-center justify-center px-6">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                        w-[900px] h-[500px] bg-blue-700/8 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-cyan-600/5 rounded-full blur-3xl" />
+      </div>
 
-      <div className="relative z-10 max-w-3xl text-center animate-fade-in">
-        {/* Welcome badge */}
-        <div className="pill border-white/10 bg-white/5 text-ink-200 mb-8">
-          <Sparkles size={14} className="text-violet-400" />
-          Welcome to my digital space
+      <div className="relative z-10 max-w-4xl w-full mx-auto text-center">
+        <div className="inline-flex items-center gap-2 mb-10 px-4 py-1.5 rounded-full
+                        border border-white/8 bg-white/3 text-xs text-ink-400 tracking-wider">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400
+                           shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+          Open to freelance & collaboration
         </div>
 
-        {/* Name */}
-        <h1 className="text-6xl md:text-7xl font-bold tracking-tight text-white mb-6">
-          Sourav Mondal
+        <h1 className="text-[clamp(3.5rem,10vw,6.5rem)] font-display font-extrabold tracking-tight
+                       text-white leading-[0.95] mb-8">
+          Sourav<br />
+          <span className="gradient-text">Mondal</span>
         </h1>
 
-        {/* Two clickable role badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-          <a href="#tools"
-             className="pill border-violet-500/40 bg-violet-600/20 text-violet-200
-                        hover:bg-violet-600/30 hover:border-violet-400/60 hover:scale-105 cursor-pointer">
-            <Code2 size={14} /> AI Engineer
-          </a>
-
-          <span className="text-ink-600">•</span>
-
-          <a href="#gallery"
-             className="pill border-emerald-500/40 bg-emerald-600/20 text-emerald-200
-                        hover:bg-emerald-600/30 hover:border-emerald-400/60 hover:scale-105 cursor-pointer">
-            <Camera size={14} /> Wildlife Photographer
-          </a>
+        <div className="flex items-center justify-center gap-3 mb-8 text-sm text-ink-400 font-medium">
+          <span>AI Engineer</span>
+          <span className="w-1 h-1 rounded-full bg-ink-600" />
+          <span>Wildlife Photographer</span>
+          <span className="w-1 h-1 rounded-full bg-ink-600" />
+          <span>Based in India</span>
         </div>
 
-        {/* Tagline */}
-        <p className="text-lg md:text-xl text-ink-200 max-w-2xl mx-auto leading-relaxed mb-10">
-          Crafting intelligent systems that push the boundaries of what's possible, while
-          capturing the untamed beauty of nature through my lens.
+        <p className="text-ink-400 text-lg max-w-md mx-auto mb-12 leading-relaxed">
+          I build AI tools that are actually useful.
+          When I'm not coding, I'm in the wild with a camera.
         </p>
 
-        {/* CTAs */}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <a href="#tools"
-             className="px-6 py-3 rounded-full bg-gradient-to-r from-violet-600 to-rose-500
-                        hover:from-violet-500 hover:to-rose-400 text-white font-medium
-                        transition-all hover:scale-105 shadow-lg shadow-violet-600/30
-                        inline-flex items-center">
-            <span className="font-mono mr-2">&lt;/&gt;</span>
-            View Projects
+             className="px-7 py-3 rounded-full bg-blue-500 text-white font-semibold text-sm
+                        hover:bg-blue-400 transition-all hover:scale-[1.03]
+                        shadow-lg shadow-blue-500/30">
+            See my work
           </a>
           <a href="#contact"
-             className="px-6 py-3 rounded-full border border-white/15 hover:border-white/30
-                        text-ink-200 hover:text-white font-medium transition-all hover:bg-white/5">
-            Contact Me
+             className="px-7 py-3 rounded-full border border-white/12 text-ink-200
+                        hover:border-blue-500/40 hover:text-white text-sm font-medium
+                        transition-all hover:bg-blue-500/6">
+            Get in touch
           </a>
         </div>
       </div>
+
+      <a href="#about"
+         className="absolute bottom-10 left-1/2 -translate-x-1/2 text-ink-600
+                    hover:text-blue-400 transition-colors animate-bounce">
+        <ArrowDown size={20} />
+      </a>
     </section>
   )
 }

@@ -70,14 +70,20 @@ def health():
 async def analyse(request: Request, files: List[UploadFile] = File(...)):
     """Process one or more bank/UPI/credit-card PDFs (+ optional spreadsheet) and return download URLs."""
 
-    # 1. Must have at least one file
+    # 1. Consent guard — frontend must send this header after user explicitly agrees
+    consent = request.headers.get("X-Consent-Given", "").strip().lower()
+    if consent != "true":
+        raise HTTPException(400, "Consent not provided. Please accept the data processing terms before uploading.")
+
+    # 2. Must have at least one file
     if not files:
         raise HTTPException(400, "No files provided.")
 
-    # 2. Set up workspace
+    # 3. Set up workspace
     job_id  = str(uuid.uuid4())
     job_dir = FILES_DIR / job_id
     job_dir.mkdir()
+    os.chmod(job_dir, 0o700)
     saved_sources = []
 
     try:
@@ -131,12 +137,14 @@ async def analyse(request: Request, files: List[UploadFile] = File(...)):
         csv_name   = f"spending_{year_month}.csv"
         csv_path   = job_dir / csv_name
         df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+        os.chmod(csv_path, 0o600)
 
         # 6. Generate PDF report
         import generate_report as gr
         report_name = f"spending_report_{year_month}.pdf"
         report_path = job_dir / report_name
         gr.generate(str(csv_path), str(report_path))
+        os.chmod(report_path, 0o600)
 
         # 7. Delete all uploaded source files (keep only CSV + report)
         for src in saved_sources:

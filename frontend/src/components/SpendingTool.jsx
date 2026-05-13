@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
 import {
   Upload, FileText, Loader2, CheckCircle, AlertCircle,
-  BarChart2, FileSpreadsheet, RefreshCw, X,
+  BarChart2, FileSpreadsheet, RefreshCw, X, Shield, ChevronDown,
 } from 'lucide-react'
+import ConsentModal from './ConsentModal'
 
 // VITE_API_URL examples:
 //   "/api"                            (same-origin EC2 nginx setup)
@@ -27,6 +28,14 @@ export default function SpendingTool() {
   const [error,    setError]    = useState('')
   const inputRef  = useRef(null)
   const abortRef  = useRef(null)
+
+  const [consentGiven, setConsentGiven] = useState(
+    () => sessionStorage.getItem('spending_consent_given') === 'true'
+  )
+  const handleConsent = () => {
+    sessionStorage.setItem('spending_consent_given', 'true')
+    setConsentGiven(true)
+  }
 
   const reset = () => {
     abortRef.current?.abort()
@@ -82,9 +91,10 @@ export default function SpendingTool() {
 
     try {
       const res = await fetch(`${API_BASE}/analyse`, {
-        method: 'POST',
-        body:   formData,
-        signal: abortRef.current.signal,
+        method:  'POST',
+        body:    formData,
+        signal:  abortRef.current.signal,
+        headers: { 'X-Consent-Given': 'true' },
       })
 
       clearTimeout(timer)
@@ -119,15 +129,20 @@ export default function SpendingTool() {
 
   return (
     <div className="card p-8 animate-glow">
-      {stage === STAGES.IDLE && (
-        <Idle files={files} dragging={dragging} error={error} inputRef={inputRef}
-              onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
-              onChange={e => addFiles(e.target.files)} onRemove={removeFile}
-              onStart={startAnalysis} />
-      )}
-      {stage === STAGES.PROCESSING && <Processing progress={progress} fileCount={files.length} />}
-      {stage === STAGES.DONE       && <Done results={results} fileCount={files.length} onReset={reset} />}
-      {stage === STAGES.ERROR      && <ErrorState error={error} onReset={reset} />}
+      {!consentGiven
+        ? <ConsentModal onAccept={handleConsent} onCancel={() => {}} />
+        : <>
+            {stage === STAGES.IDLE && (
+              <Idle files={files} dragging={dragging} error={error} inputRef={inputRef}
+                    onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
+                    onChange={e => addFiles(e.target.files)} onRemove={removeFile}
+                    onStart={startAnalysis} />
+            )}
+            {stage === STAGES.PROCESSING && <Processing progress={progress} fileCount={files.length} />}
+            {stage === STAGES.DONE       && <Done results={results} fileCount={files.length} onReset={reset} />}
+            {stage === STAGES.ERROR      && <ErrorState error={error} onReset={reset} />}
+          </>
+      }
     </div>
   )
 }
@@ -199,6 +214,28 @@ function Idle({ files, dragging, error, inputRef, onDrop, onDragOver, onDragLeav
       <p className="text-xs text-ink-600 text-center">
         Powered by Llama 4 Scout (Meta) via Groq &bull; 100% open-source AI
       </p>
+
+      <details className="rounded-xl border border-bg-600 overflow-hidden text-left">
+        <summary className="flex items-center justify-between px-4 py-3 cursor-pointer
+                            text-xs text-ink-400 hover:text-ink-200 select-none
+                            bg-bg-700 hover:bg-bg-600 transition-colors list-none">
+          <span className="flex items-center gap-2">
+            <Shield size={12} className="text-blue-400" />
+            Privacy &amp; Data Processing Details
+          </span>
+          <ChevronDown size={12} />
+        </summary>
+        <div className="px-4 py-4 bg-bg-800 text-xs text-ink-400 space-y-2.5 leading-relaxed">
+          <p><strong className="text-ink-200">What is processed:</strong> PDF pages are rendered as images in memory and sent to Groq's API. No raw PDF bytes leave this server — only page images.</p>
+          <p><strong className="text-ink-200">Third-party processor:</strong> Groq Cloud (US) runs Meta's Llama 4 Scout vision model. See their{' '}
+            <a href="https://groq.com/privacy-policy" target="_blank" rel="noopener noreferrer"
+               className="text-blue-400 hover:underline">Privacy Policy</a>.
+          </p>
+          <p><strong className="text-ink-200">Retention:</strong> Source files deleted immediately after extraction. CSV and PDF report deleted automatically after 1 hour.</p>
+          <p><strong className="text-ink-200">No identity linkage:</strong> No user accounts, no cookies, no analytics. Each job gets a random UUID with no association to you.</p>
+          <p><strong className="text-ink-200">India DPDPA 2023:</strong> Data is processed only for the purpose you consented to and deleted automatically. You have the right to not use this tool if you do not consent.</p>
+        </div>
+      </details>
     </div>
   )
 }
